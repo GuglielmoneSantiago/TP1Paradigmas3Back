@@ -1,25 +1,25 @@
-const axios = require("axios");
-const cheerio = require("cheerio");
-const fs =require ("fs");
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
+const priceRoutes = require('./routes/priceRoutes');
 
-const url = "https://flybondi.com/ar/search/dates?adults=1&children=0&currency=ARS&fromCityCode=CNQ&infants=0&toCityCode=BUE&utm_origin=search_bar"
+const app = express();
+app.use(express.json());
 
-const vuelosData= {};
-async function getHTML() {
-    const{data:html}=await axios.get(url);
-    return html;
-};
+const PORT = process.env.PORT || 3001;
+const MONGO_URI = process.env.MONGODB_URI;
 
-getHTML().then((res)=>{
-    const $=cheerio.load(res);
-    $('section.jsx-1854179682 .contDay').each((index, element) => {
-        const day = $(element).find('jsx-1854179682 pa0').text().trim(); // Obtener el día
-        const price = $(element).find('jsx-1854179682 grey-75 fare-day').text().trim(); // Obtener el precio
+app.use('/api', priceRoutes);
 
-        vuelosData[day] = price;
+mongoose.connect(MONGO_URI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}/`);
     });
-    fs.writeFile('vuelosData.json', JSON.stringify(vuelosData), (err) =>{
-        if (err) throw err;
-        console.log('Archivo salvado dea');
-    })
-})
+  })
+  .catch((error) => {
+    console.error('Error connecting to MongoDB:', error.message);
+    process.exit(1);
+});
+
