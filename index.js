@@ -15,10 +15,11 @@ mongoose.connect(MONGO_URI)
   .then(() => {
     console.log('Connected to MongoDB');
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`Server running at http://localhost:${PORT}/`);
     });
   })
   .catch((error) => {
     console.error('Error connecting to MongoDB:', error.message);
     process.exit(1);
-  });
+});
+
