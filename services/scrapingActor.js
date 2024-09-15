@@ -1,15 +1,18 @@
+// scrapingActor.js
 const puppeteer = require('puppeteer');
 const EventEmitter = require('events');
+const io = require('socket.io-client');
+const socket = io('http://<IP_DE_LA_MAQUINA_CON_STORAGE_ACTOR>:3002'); // IP y puerto de la otra máquina
 
 class ScrapingActor extends EventEmitter {
-    async scrape(url) {
+    async scrape(url, model) {
         let price;
         try {
             const browser = await puppeteer.launch();
             const page = await browser.newPage();
             await page.goto(url, { waitUntil: 'networkidle2' });
             console.log(`Visiting ${url}`);
-            
+
             price = await page.evaluate(() => {
                 const priceElement = document.querySelector('.price');
                 return priceElement ? priceElement.innerText : 'No encontrado';
@@ -22,7 +25,8 @@ class ScrapingActor extends EventEmitter {
             price = 'Error';
         }
 
-        this.emit('priceExtracted', price);
+        // Envía los precios al StorageActor por el socket
+        socket.emit('priceExtracted', { model, prices: [price] });
     }
 }
 
