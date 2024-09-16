@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const EventEmitter = require('events');
 const io = require('socket.io-client');
-const socket = io('http://192.168.0.24:3002'); // IP y puerto de la otra máquina
+const socket = io('http://IP_MAQU:3002'); // IP y puerto de la otra máquina
 
 class ScrapingActor extends EventEmitter {
     async scrape(url, model) {

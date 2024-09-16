@@ -11,7 +11,7 @@ class StorageActor extends EventEmitter {
 
             // Escucha cuando el ScrapingActor envía precios
             socket.on('priceExtracted', async (data) => {
-                console.log(`Received prices for model ${data.model}: ${JSON.stringify(data.prices)}`);
+                console.log(`Precio del modelo recibido ${data.model}: ${JSON.stringify(data.prices)}`);
                 await this.store(data.model, data.prices);
             });
         });
@@ -33,7 +33,7 @@ class StorageActor extends EventEmitter {
                 { $push: { prices: { $each: priceEntries } } }, // Guardar cada precio como un objeto con más detalles
                 { upsert: true }
             );
-            console.log(`Stored prices for model ${model}`);
+            console.log(`Precio del modelo: ${model} guardado`);
         } catch (error) {
             console.error(`Error storing prices for model ${model}: ${error.message}`);
         }
