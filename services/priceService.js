@@ -1,8 +1,7 @@
 const ScrapingActor = require('../actors/scrapingActor');
 const ComparisonActor = require('../actors/comparisonActor');
 const StorageActor = require('../actors/storageActor');
-const fs = require('fs');
-const path = require('path');
+const config = require('../config/config');
 
 // Inicializa los actores
 const scrapingActor = new ScrapingActor();
@@ -16,55 +15,46 @@ function cleanPrice(price) {
 }
 
 exports.getPricesForModel = async (model) => {
-    const urls = [
-        `https://deliteshop.com.ar/product-category/calzado/zapatillas/?s=${encodeURIComponent(model)}`,
-        `https://hoopshoes.net/categoria/calzado/?s=${encodeURIComponent(model)}`
-    ];
+    const modelData = config.models.find(m => m.name === model);
 
-    // Promesas de scraping
-    const scrapingPromises = urls.map(async (url) => {
+    if (!modelData) {
+        console.log(`El modelo ${model} no se encuentra en la configuración`);
+        return;
+    }
+
+    // Iterar sobre las tiendas definidas en la configuración
+    const scrapingPromises = config.stores.map(async (store) => {
+        const url = `${store.baseUrl}${encodeURIComponent(model)}`;
         try {
             const priceData = await scrapingActor.scrape(url, model);
-            if (!priceData) {
-                console.log(`No se encontraron datos para la URL: ${url}`);
-            }
-            return priceData ? priceData : null;  // Devuelve null si no hay datos
+            return priceData ? priceData : null;
         } catch (error) {
             console.error(`Error al hacer scraping en la URL ${url}:`, error.message);
-            return null;  // Ignorar las tiendas que fallan
+            return null;
         }
     });
-
     // Esperar a que todas las promesas se resuelvan
     let prices = await Promise.all(scrapingPromises);
-    prices = prices.filter(price => price !== null);  // Filtrar resultados null
+    prices = prices.filter(price => price !== null);
 
     if (prices.length === 0) {
         console.log(`No se encontraron precios para el modelo ${model}`);
         return;
     }
 
-    // Limpiar los precios (eliminar símbolos de moneda y convertirlos a números)
-    prices = prices.map(price => {
-        return {
-            store: price.storeName,
-            originalPrice: cleanPrice(price.originalPrice),
-            discountPrice: price.discountPrice !== 'No hay descuento' ? cleanPrice(price.discountPrice) : null,
-            inStock: price.inStock
-        };
-    });
+    // Limpiar los precios antes de almacenarlos
+    prices = prices.map(price => ({
+        storeName: price.storeName,
+        originalPrice: cleanPrice(price.originalPrice),
+        discountPrice: price.discountPrice !== 'No hay descuento' ? cleanPrice(price.discountPrice) : null,
+        inStock: price.inStock
+    }));
 
     // Comparar los precios obtenidos
-    const comparisonResult = comparisonActor.compare(prices);
+    const comparisonResult = comparisonActor.compare(model, prices);
 
-    // Imprimir en consola los resultados
-    console.log(`Resultados de la comparación para el modelo ${model}:`);
-    console.log(comparisonResult);
-
-    // Guardar en archivo
-    const sanitizedModel = model.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    const filePath = path.join(__dirname, `${sanitizedModel}_prices.txt`);
-    fs.writeFileSync(filePath, JSON.stringify(comparisonResult, null, 2));
+    // Imprimir solo el mensaje de la comparación
+    console.log(comparisonResult.message);
 
     // Guardar en la base de datos
     try {

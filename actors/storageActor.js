@@ -1,58 +1,31 @@
 const Sneaker = require('../models/sneakerModel');
 const EventEmitter = require('events');
-const io = require('socket.io')(3002); // Máquina B escucha en el puerto 3002
+const io = require('socket.io')(3000);  // La máquina receptora escucha en este puerto
 
 class StorageActor extends EventEmitter {
     constructor() {
         super();
-        // Escuchar los eventos de scraping desde la Máquina A
+
+        // Escuchar los eventos de scraping desde la máquina de scraping (ScrapingActor)
         io.on('connection', (socket) => {
-            console.log('StorageActor connected to socket');
+            console.log('StorageActor conectado al socket');
 
-            // Escuchar cuando la Máquina A envía precios
+            // Escucha cuando la máquina remota envía los precios extraídos
             socket.on('priceExtracted', async (data) => {
-                console.log(`Precio del modelo recibido ${data.model}: ${JSON.stringify(data.prices)}`);
-                
-                // Validar datos antes de almacenar
-                if (this.validatePrices(data.prices)) {
-                    await this.store(data.model, data.prices);
-                } else {
-                    console.error(`Datos inválidos recibidos para el modelo ${data.model}`);
-                }
-            });
-
-            // Manejar desconexiones de sockets
-            socket.on('disconnect', () => {
-                console.log('Conexión de socket perdida');
+                console.log(`Precio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}`);
+                await this.store(data.model, [data.result]);
             });
         });
     }
 
-    // Método para validar los precios
-    validatePrices(prices) {
-        return prices.every(price => 
-            price.storeName && 
-            price.originalPrice && 
-            typeof price.inStock === 'string'
-        );
-    }
-
-    // Almacenar precios en la base de datos
     async store(model, prices) {
         try {
-            const priceEntries = prices.map(price => ({
-                store: price.storeName,
-                originalPrice: price.originalPrice,
-                discountPrice: price.discountPrice,
-                inStock: price.inStock
-            }));
-
             await Sneaker.findOneAndUpdate(
                 { model },
-                { $push: { prices: { $each: priceEntries } } },
-                { upsert: true, new: true } // upsert para crear si no existe, new para devolver el documento actualizado
+                { $push: { prices: { $each: prices } } },
+                { upsert: true, new: true }
             );
-            console.log(`Precio del modelo: ${model} guardado en la base de datos`);
+            console.log(`Precio del modelo ${model} guardado en la base de datos`);
         } catch (error) {
             console.error(`Error al guardar precios para el modelo ${model}: ${error.message}`);
         }

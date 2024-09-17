@@ -2,15 +2,12 @@ module.exports = {
     models: [
         {
             name: 'Nike Precision 7',
-            category: 'basketball', // Puedes agregar categorías si lo necesitas
         },
         {
-            name: 'Under Armour Curry 8 flow white iridescent',
-            category: 'basketball',
+            name: 'Nike LeBron Witness 7',
         },
         {
             name: 'Finders Free Throw',
-            category: 'lifestyle',
         }
     ],
     stores: [
@@ -21,6 +18,10 @@ module.exports = {
         {
             name: 'Hoop Shoes',
             baseUrl: 'https://hoopshoes.net/categoria/calzado/?s=',
+        },
+        {
+            name: 'SlamDunkArgentina',
+            baseUrl: 'https://www.slamdunkargentina.com.ar/zapatillas/?s=',
         }
     ]
 };
