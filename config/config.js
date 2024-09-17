@@ -20,8 +20,8 @@ module.exports = {
             baseUrl: 'https://hoopshoes.net/categoria/calzado/?s=',
         },
         {
-            name: 'SlamDunkArgentina',
-            baseUrl: 'https://www.slamdunkargentina.com.ar/zapatillas/?s=',
+            name: 'Clutch Seller',
+            baseUrl: 'https://clutchseller.com/?s=',
         }
     ]
 };

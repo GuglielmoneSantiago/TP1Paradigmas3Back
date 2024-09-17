@@ -56,35 +56,49 @@ class ScrapingActor extends EventEmitter {
 
                     return { storeName: 'Deliteshop', model: model, originalPrice, discountPrice, inStock: 'Sí' };
                 }, model);
-            } else if (storeName.includes('slamdunkargentina')) {
-                // Lógica para SlamDunkArgentina
-                result.storeName = 'SlamDunkArgentina';div 
-                result = await page.evaluate((model) => {
-                    const priceContainer = document.querySelector('.item-price-container.mb-1');
+            } else if (storeName.includes('clutchseller')) {
+                result.storeName = 'Clutch Seller';
             
-                    // Si no hay contenedor de precio, no se encuentra el modelo
-                    if (!priceContainer) {
-                        return { storeName: 'SlamDunkArgentina', model: model, originalPrice: 'No se vende este modelo', discountPrice: 'No hay descuento', inStock: 'No' };
+                // Esperar a que el precio esté visible en la página antes de continuar
+                await page.waitForSelector('.price', { visible: true, timeout: 10000 });
+            
+                result = await page.evaluate((model) => {
+                    // Encontrar el contenedor de precios
+                    const priceElement = document.querySelector('.price');
+            
+                    // Si no se encuentra el contenedor del precio, devolver un resultado indicando que no está disponible
+                    if (!priceElement) {
+                        return { 
+                            storeName: 'Clutch Seller', 
+                            model: model, 
+                            originalPrice: 'No se vende este modelo', 
+                            discountPrice: '-', 
+                            inStock: '-' 
+                        };
                     }
             
-                    // Extraer el precio actual
-                    const currentPriceElement = priceContainer.querySelector('.js-price-display.item-price');
-                    const currentPrice = currentPriceElement ? currentPriceElement.innerText : 'No disponible';
+                    // Extraer el precio con descuento si existe
+                    const discountPriceElement = priceElement.querySelector('ins .woocommerce-Price-amount');
+                    const discountPrice = discountPriceElement ? discountPriceElement.innerText.trim() : 'No hay descuento';
             
-                    // Extraer el precio original en caso de descuento
-                    const originalPriceElement = priceContainer.querySelector('.js-compare-price-display.price-compare');
-                    const originalPrice = originalPriceElement ? originalPriceElement.innerText : currentPrice;  // Si no hay descuento, el precio original es el actual
+                    // Extraer el precio original (antes del descuento)
+                    const originalPriceElement = priceElement.querySelector('del[aria-hidden="true"] .woocommerce-Price-amount');
+                    const originalPrice = originalPriceElement ? originalPriceElement.innerText.trim() : discountPrice;
             
-                    return {
-                        storeName: 'SlamDunkArgentina',
-                        model: model,
-                        originalPrice: originalPrice,
-                        discountPrice: originalPriceElement ? currentPrice : 'No hay descuento',
-                        inStock: 'Sí'  // Suposición: si el precio aparece, el producto está en stock
+                    // Si no hay descuento, tomar el precio actual
+                    const currentPriceElement = priceElement.querySelector('.woocommerce-Price-amount');
+                    const currentPrice = currentPriceElement ? currentPriceElement.innerText.trim() : 'No disponible';
+            
+                    return { 
+                        storeName: 'Clutch Seller', 
+                        model: model, 
+                        originalPrice: originalPrice, 
+                        discountPrice: discountPrice, 
+                        inStock: 'Sí' 
                     };
                 }, model);
+            
             }
-
             console.log('Extracted Data:', result);
 
             // Enviar los resultados a la máquina remota a través del socket
