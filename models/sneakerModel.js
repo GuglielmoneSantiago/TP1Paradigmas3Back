@@ -4,10 +4,10 @@ const sneakerSchema = new mongoose.Schema({
   model: { type: String, required: true, unique: true },
   prices: [{
     store: String,
-    originalPrice: String,
-    discountPrice: String,
+    originalPrice: Number,  // Asegúrate de que este campo es un número
+    discountPrice: Number,  // Asegúrate de que este campo es un número (puede ser null)
     inStock: String
-  }]  // Array de objetos con los detalles del precio
+  }]
 });
 
 module.exports = mongoose.model('Sneaker', sneakerSchema);

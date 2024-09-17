@@ -1,29 +1,66 @@
-const ScrapingActor = require('./scrapingActor');
-const StorageActor = require('./storageActor');
+const ScrapingActor = require('../actors/scrapingActor');
+const ComparisonActor = require('../actors/comparisonActor');
+const StorageActor = require('../actors/storageActor');
+const config = require('../config/config');
 
+// Inicializa los actores
 const scrapingActor = new ScrapingActor();
 const storageActor = new StorageActor();
+const comparisonActor = new ComparisonActor();
 
-exports.getPrices = async (model) => {
-    const urls = [
-        `https://deliteshop.com.ar/product-category/calzado/zapatillas/?s=${encodeURIComponent(model)}`,
-        `https://hoopshoes.net/categoria/calzado/?s=${encodeURIComponent(model)}`
-    ];
+// Función para limpiar los precios y convertirlos a números, si no es posible convertir, devolver null
+function cleanPrice(price) {
+    const cleanedPrice = parseFloat(price.replace(/[^\d.-]/g, ''));
+    return isNaN(cleanedPrice) ? null : cleanedPrice;
+}
 
-    const scrapingPromises = urls.map(url => {
-        return new Promise((resolve) => {
-            scrapingActor.once('priceExtracted', resolve); // Escuchar el evento priceExtracted por cada URL
-            scrapingActor.scrape(url, model);
-        });
+exports.getPricesForModel = async (model) => {
+    const modelData = config.models.find(m => m.name === model);
+
+    if (!modelData) {
+        console.log(`El modelo ${model} no se encuentra en la configuración`);
+        return;
+    }
+
+    // Iterar sobre las tiendas definidas en la configuración
+    const scrapingPromises = config.stores.map(async (store) => {
+        const url = `${store.baseUrl}${encodeURIComponent(model)}`;
+        try {
+            const priceData = await scrapingActor.scrape(url, model);
+            return priceData ? priceData : null;
+        } catch (error) {
+            console.error(`Error al hacer scraping en la URL ${url}:`, error.message);
+            return null;
+        }
     });
+    // Esperar a que todas las promesas se resuelvan
+    let prices = await Promise.all(scrapingPromises);
+    prices = prices.filter(price => price !== null);
 
-    const prices = await Promise.all(scrapingPromises);
+    if (prices.length === 0) {
+        console.log(`No se encontraron precios para el modelo ${model}`);
+        return;
+    }
 
-    // Almacenar los precios en la base de datos
-    await storageActor.store(model, prices);
+    // Limpiar los precios antes de almacenarlos
+    prices = prices.map(price => ({
+        storeName: price.storeName,
+        originalPrice: cleanPrice(price.originalPrice),
+        discountPrice: price.discountPrice !== 'No hay descuento' ? cleanPrice(price.discountPrice) : null,
+        inStock: price.inStock
+    }));
 
-    // Devolver el resultado en formato Tienda: Precio Original: Precio con Descuento
-    return prices.map(priceData => {
-        return `Tienda: ${priceData.store}, Precio Original: ${priceData.originalPrice}, Precio con Descuento: ${priceData.discountPrice}`;
-    });
+    // Comparar los precios obtenidos
+    const comparisonResult = comparisonActor.compare(model, prices);
+
+    // Imprimir solo el mensaje de la comparación
+    console.log(comparisonResult.message);
+
+    // Guardar en la base de datos
+    try {
+        await storageActor.store(model, prices);
+        console.log(`Datos guardados correctamente para el modelo ${model}`);
+    } catch (error) {
+        console.error(`Error al guardar datos en la base de datos para el modelo ${model}:`, error.message);
+    }
 };
