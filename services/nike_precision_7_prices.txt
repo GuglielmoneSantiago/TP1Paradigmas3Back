@@ -1,0 +1,22 @@
+{
+  "lowestPrice": {
+    "store": "Deliteshop",
+    "originalPrice": 169.9,
+    "discountPrice": null,
+    "inStock": "Sí"
+  },
+  "allPrices": [
+    {
+      "store": "Deliteshop",
+      "originalPrice": 169.9,
+      "discountPrice": null,
+      "inStock": "Sí"
+    },
+    {
+      "store": "Hoopshoes",
+      "originalPrice": 179.99,
+      "discountPrice": null,
+      "inStock": "Sí"
+    }
+  ]
+}
