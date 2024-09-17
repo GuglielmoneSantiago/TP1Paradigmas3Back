@@ -6,25 +6,24 @@ const io = require('socket.io-client');
 const socket = io('http://IP_DE_LA_MAQUINA_REMOTA:PUERTO');  // Reemplaza con la IP y puerto reales
 
 class ScrapingActor extends EventEmitter {
-    async scrape(url, model) {
+    async scrape(url, model, paginated = false) {
         let result = { store: '', storeName: '', model: model, originalPrice: '', discountPrice: '', inStock: '' };
         let browser;
 
         try {
             browser = await puppeteer.launch({ headless: true });
             const page = await browser.newPage();
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });  // Aumenta a 60 segundos (60000 ms)
-            console.log(`Visiting ${url}`);
+            console.log(`Visiting ${url}`);  // Muestra la URL solo una vez
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
             const storeName = new URL(url).hostname;
-            result.store = storeName || 'Desconocido';  // Asegúrate de que storeName siempre tenga un valor
+            result.store = storeName || 'Desconocido';
 
             if (storeName.includes('hoopshoes')) {
                 result.storeName = 'Hoopshoes';
                 result = await page.evaluate((model) => {
                     const priceElement = document.querySelector('.price');
-                    const thumbnailWrap = document.querySelector('.astra-shop-thumbnail-wrap');
-                    const outOfStockElement = thumbnailWrap ? thumbnailWrap.querySelector('span.ast-shop-product-out-of-stock') : null;
+                    const outOfStockElement = document.querySelector('.out-of-stock');
 
                     if (!priceElement) {
                         return { storeName: 'Hoopshoes', model: model, originalPrice: 'No se vende este modelo', discountPrice: '-', inStock: '-' };
@@ -57,32 +56,64 @@ class ScrapingActor extends EventEmitter {
                     return { storeName: 'Deliteshop', model: model, originalPrice, discountPrice, inStock: 'Sí' };
                 }, model);
             } else if (storeName.includes('slamdunkargentina')) {
-                // Lógica para SlamDunkArgentina
-                result.storeName = 'SlamDunkArgentina';div 
-                result = await page.evaluate((model) => {
-                    const priceContainer = document.querySelector('.item-price-container.mb-1');
-            
-                    // Si no hay contenedor de precio, no se encuentra el modelo
-                    if (!priceContainer) {
-                        return { storeName: 'SlamDunkArgentina', model: model, originalPrice: 'No se vende este modelo', discountPrice: 'No hay descuento', inStock: 'No' };
+                result.storeName = 'SlamDunkArgentina';
+                let foundProduct = null;
+                let pageNumber = 1;
+
+                while (!foundProduct && pageNumber <= 10) {
+                    const paginatedUrl = `${url}&mpage=${pageNumber}`;
+                    // Eliminamos el console.log aquí para no mostrar en cada página visitada
+                    await page.goto(paginatedUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+
+                    foundProduct = await page.evaluate((model) => {
+                        const productContainers = document.querySelectorAll('div.js-product-container.js-quickshop-container');
+                        if (!productContainers) return null;  // Verificar si existen productos en la página
+
+                        let matchingProduct = null;
+
+                        productContainers.forEach((product) => {
+                            const titleElement = product.querySelector('a.item-link[title]');
+                            const title = titleElement ? titleElement.getAttribute('title') : null;
+                            
+                            if (title && title.toLowerCase().includes(model.toLowerCase())) {
+                                matchingProduct = product;
+                            }
+                        });
+
+                        if (!matchingProduct) {
+                            return null;
+                        }
+
+                        const priceContainer = matchingProduct.querySelector('.item-price-container.mb-1');
+                        if (!priceContainer) return null;
+
+                        // Extraer el precio original
+                        const originalPriceElement = priceContainer.querySelector('.js-price-display.item-price');
+                        const originalPrice = originalPriceElement ? originalPriceElement.innerText.trim() : 'No disponible';
+
+                        // Extraer el precio de descuento, si existe
+                        const discountPriceElement = priceContainer.querySelector('.js-compare-price-display.price-compare');
+                        const discountPrice = discountPriceElement ? discountPriceElement.innerText.trim() : 'No hay descuento';
+
+                        return {
+                            storeName: 'SlamDunkArgentina',
+                            model: model,
+                            originalPrice: originalPrice,
+                            discountPrice: discountPrice !== 'No hay descuento' ? discountPrice : null,  // Solo guardar si hay descuento
+                            inStock: 'Sí'
+                        };
+                    }, model);
+
+                    if (!foundProduct) {
+                        pageNumber++;
                     }
-            
-                    // Extraer el precio actual
-                    const currentPriceElement = priceContainer.querySelector('.js-price-display.item-price');
-                    const currentPrice = currentPriceElement ? currentPriceElement.innerText : 'No disponible';
-            
-                    // Extraer el precio original en caso de descuento
-                    const originalPriceElement = priceContainer.querySelector('.js-compare-price-display.price-compare');
-                    const originalPrice = originalPriceElement ? originalPriceElement.innerText : currentPrice;  // Si no hay descuento, el precio original es el actual
-            
-                    return {
-                        storeName: 'SlamDunkArgentina',
-                        model: model,
-                        originalPrice: originalPrice,
-                        discountPrice: originalPriceElement ? currentPrice : 'No hay descuento',
-                        inStock: 'Sí'  // Suposición: si el precio aparece, el producto está en stock
-                    };
-                }, model);
+                }
+
+                if (!foundProduct) {
+                    result = { storeName: 'SlamDunkArgentina', model: model, originalPrice: 'No se vende este modelo', discountPrice: '-', inStock: '-' };
+                } else {
+                    result = foundProduct;
+                }
             }
 
             console.log('Extracted Data:', result);
