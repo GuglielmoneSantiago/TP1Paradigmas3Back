@@ -1,0 +1,77 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scraping Prices Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        h1 {
+            color: #333;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        #prices {
+            margin-top: 20px;
+        }
+        .price-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Price Scraping Results</h1>
+    <input type="text" id="modelInput" placeholder="Enter sneaker model">
+    <button onclick="getPrices()">Get Prices</button>
+    <div id="prices"></div>
+
+    <script>
+        async function getPrices() {
+            const model = document.getElementById('modelInput').value;
+            const pricesDiv = document.getElementById('prices');
+            pricesDiv.innerHTML = ''; // Clear previous results
+
+            if (!model) {
+                alert('Please enter a sneaker model.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:3001/api/prices/${encodeURIComponent(model)}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch prices');
+                }
+
+                const data = await response.json();
+                if (data.prices && data.prices.length > 0) {
+                    data.prices.forEach((price, index) => {
+                        const priceItem = document.createElement('div');
+                        priceItem.className = 'price-item';
+                        priceItem.innerText = `Price from site ${index + 1}: ${price}`;
+                        pricesDiv.appendChild(priceItem);
+                    });
+                } else {
+                    pricesDiv.innerHTML = '<div class="error">No prices found for this model.</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching prices:', error);
+                pricesDiv.innerHTML = '<div class="error">Error fetching prices. Please try again later.</div>';
+            }
+        }
+    </script>
+</body>
+</html>
