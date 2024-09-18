@@ -3,9 +3,9 @@ const mongoose = require('mongoose');
 const sneakerSchema = new mongoose.Schema({
   model: { type: String, required: true, unique: true },
   prices: [{
-    store: String,
-    originalPrice: Number,  // Asegúrate de que este campo es un número
-    discountPrice: Number,  // Asegúrate de que este campo es un número (puede ser null)
+    storeName: String,
+    originalPrice: { type: String, required: true },  // Guardar como cadena
+    discountPrice: { type: String, default: null },   // Guardar como cadena o null si no hay descuento
     inStock: String
   }]
 });
