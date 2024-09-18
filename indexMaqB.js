@@ -22,28 +22,24 @@ io.on('connection', (socket) => {
     const storageActor = new StorageActor(socket);
 
     // Variables de control
-    let totalModels = config.models.length * config.stores.length; // Número total de combinaciones de modelos y tiendas
+    const totalModels = config.models.length * config.stores.length; // Número total de combinaciones de modelos y tiendas
     let processedCount = 0;
 
-    // Escuchar el evento 'priceExtracted' desde la Máquina A
+    // El almacenamiento y procesamiento se delega completamente al StorageActor
     socket.on('priceExtracted', async ({ model, result }) => {
         try {
-            // Almacenar los precios recibidos en la base de datos
-            await storageActor.store(model, [result]);
-            console.log(`Datos del modelo ${model} de la tienda ${result.storeName} almacenados correctamente en Base de Datos\n`);
-
-            // Incrementar el contador de modelos procesados
+            // Delegar el almacenamiento al StorageActor
+            await storageActor.store(model, result);
             processedCount++;
 
-            // Verificar si todos los modelos y tiendas han sido procesados
+            console.log(`Datos del modelo ${model} de la tienda ${result.storeName} almacenados correctamente en Base de Datos\n`);
+
             if (processedCount === totalModels) {
                 console.log('\nTodos los modelos han sido procesados y guardados en la base de datos.');
 
-                // Cerrar la conexión a MongoDB
+                // Cerrar la conexión a MongoDB y el socket
                 await mongoose.connection.close();
                 console.log('Conexión a MongoDB cerrada.');
-
-                // Desconectar el socket
                 socket.disconnect();
                 console.log('Socket desconectado.');
                 process.exit(0);  // Finalizar el proceso
