@@ -30,7 +30,6 @@ async function scrapeModelInStores(model) {
     await Promise.all(scrapeModelPromises);
 
     // Enviar un mensaje a la máquina B indicando que se completó todo el scraping
-    socket.emit('scrapingCompleted', { message: 'Scraping de todos los modelos completado' });
 
     console.log('\nTodos los modelos y tiendas han sido procesados. Cerrando conexiones...');
 
