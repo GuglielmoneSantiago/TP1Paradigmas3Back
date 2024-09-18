@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const io = require('socket.io')(3002);
 const StorageActor = require('./actors/storageActor');
 
+// Variables de control
+let totalModels = 3;  // Ajusta esto según la cantidad de modelos que esperas recibir
+let processedCount = 0;
+
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
@@ -13,33 +17,38 @@ mongoose.connect(process.env.MONGODB_URI)
     process.exit(1);
   });
 
-let completedModels = 0;  // Contador para los modelos procesados
-const totalModels = 3;  // Número total de modelos que vas a procesar
-
 // Escuchar conexiones desde la Máquina A
 io.on('connection', (socket) => {
-    console.log('Conexión establecida con la Máquina A');
+    console.log('Conexión establecida con la Máquina A\n');
 
     const storageActor = new StorageActor(socket);
 
-    socket.once('priceExtracted', async (data) => {
+    socket.on('priceExtracted', async (data) => {
         try {
-            console.log(`Precio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}`);
-            await storageActor.store(data.model, [data.result]);
-
-            console.log(`Precio del modelo ${data.model} guardado en la base de datos correctamente`);
+            console.log(`\nPrecio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}\n`);
             
-            completedModels++;
+            const cleanedPrices = {
+                storeName: data.result.storeName,
+                model: data.result.model,
+                originalPrice: data.result.originalPrice,
+                discountPrice: data.result.discountPrice,
+                inStock: data.result.inStock
+            };
 
-            // Verifica si todos los modelos han sido procesados
-            if (completedModels === totalModels) {
-                console.log('Todos los modelos han sido procesados. Cerrando conexiones...');
+            await storageActor.store(data.model, [cleanedPrices]);
+            console.log(`\nPrecio del modelo ${data.model} de la tienda ${data.result.storeName} guardado en la base de datos correctamente\n`);
+
+            processedCount++;
+
+            // Verificar si hemos procesado todos los modelos
+            if (processedCount === totalModels) {
+                console.log('\nTodos los modelos han sido procesados. Cerrando conexiones...\n');
                 socket.disconnect();  // Desconectar el socket
-                mongoose.connection.close();  // Cerrar conexión a MongoDB
+                await mongoose.connection.close();  // Cerrar conexión a MongoDB
                 process.exit(0);  // Cerrar el proceso
             }
         } catch (error) {
-            console.error(`Error al procesar el modelo ${data.model}: ${error.message}`);
+            console.error(`Error al procesar y almacenar los precios recibidos: ${error.message}`);
         }
     });
 });
