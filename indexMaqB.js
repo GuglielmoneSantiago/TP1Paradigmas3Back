@@ -1,11 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const io = require('socket.io')(3002);
+const io = require('socket.io')(3002);  // Cambia el puerto donde escuchará la Máquina B
 const StorageActor = require('./actors/storageActor');
-
-// Variables de control
-let totalModels = 3;  // Ajusta esto según la cantidad de modelos que esperas recibir
-let processedCount = 0;
 
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -19,36 +15,25 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Escuchar conexiones desde la Máquina A
 io.on('connection', (socket) => {
-    console.log('Conexión establecida con la Máquina A\n');
+    console.log('Conexión establecida con la Máquina A');
 
+    // Inicializa el StorageActor con el socket
     const storageActor = new StorageActor(socket);
 
-    socket.on('priceExtracted', async (data) => {
+    // Escuchar el evento 'priceExtracted' desde la Máquina A
+    socket.on('priceExtracted', async ({ model, result }) => {
         try {
-            console.log(`\nPrecio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}\n`);
+            console.log(`Recibidos datos para el modelo ${model} en la Máquina B:`, result);
+    
+            // Almacenar los precios recibidos en la base de datos
+            await storageActor.store(model, [result]);
+            console.log(`Datos del modelo ${model} almacenados correctamente en la Máquina B`);
             
-            const cleanedPrices = {
-                storeName: data.result.storeName,
-                model: data.result.model,
-                originalPrice: data.result.originalPrice,
-                discountPrice: data.result.discountPrice,
-                inStock: data.result.inStock
-            };
-
-            await storageActor.store(data.model, [cleanedPrices]);
-            console.log(`\nPrecio del modelo ${data.model} de la tienda ${data.result.storeName} guardado en la base de datos correctamente\n`);
-
-            processedCount++;
-
-            // Verificar si hemos procesado todos los modelos
-            if (processedCount === totalModels) {
-                console.log('\nTodos los modelos han sido procesados. Cerrando conexiones...\n');
-                socket.disconnect();  // Desconectar el socket
-                await mongoose.connection.close();  // Cerrar conexión a MongoDB
-                process.exit(0);  // Cerrar el proceso
-            }
+            // Enviar confirmación a la Máquina A
+            socket.emit('dataStored', `Datos del modelo ${model} almacenados correctamente`);
         } catch (error) {
-            console.error(`Error al procesar y almacenar los precios recibidos: ${error.message}`);
+            console.error(`Error al almacenar los datos en la Máquina B: ${error.message}`);
+            socket.emit('dataStoredError', `Error al almacenar los datos para el modelo ${model}: ${error.message}`);
         }
-    });
+    });    
 });

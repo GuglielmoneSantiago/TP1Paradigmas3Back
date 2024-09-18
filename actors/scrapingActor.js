@@ -115,7 +115,7 @@ class ScrapingActor extends EventEmitter {
             console.log('Datos extraídos:', result);
 
             // Enviar los resultados a la máquina B a través del socket
-            this.socket.emit('priceExtracted', { model, result });
+            this.socket.emit('priceExtracted', { model: model, result: result });
 
             return result;
         } catch (error) {
