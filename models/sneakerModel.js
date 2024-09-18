@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const sneakerSchema = new mongoose.Schema({
-  model: { type: String, required: true, unique: true },
+  model: { type: String, required: true},
   prices: [{
     storeName: String,
     originalPrice: { type: String, required: true },  // Guardar como cadena
