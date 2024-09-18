@@ -2,8 +2,8 @@ const puppeteer = require('puppeteer');
 const EventEmitter = require('events');
 const io = require('socket.io-client');
 
-// Conexión con la máquina remota usando su IP
-const socket = io('http://IP_DE_LA_MAQUINA_REMOTA:PUERTO');  // Reemplaza con la IP y puerto reales
+// Conexión con la máquina B usando su IP y puerto
+const socket = io('http://192.168.0.8:3002');  // Reemplaza con la IP y puerto reales
 
 class ScrapingActor extends EventEmitter {
     async scrape(url, model, paginated = false) {
@@ -13,7 +13,7 @@ class ScrapingActor extends EventEmitter {
         try {
             browser = await puppeteer.launch({ headless: true });
             const page = await browser.newPage();
-            console.log(`Visiting ${url}`);  // Muestra la URL solo una vez
+            console.log(`Visitando ${url}`);
             await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
             const storeName = new URL(url).hostname;
@@ -62,36 +62,31 @@ class ScrapingActor extends EventEmitter {
 
                 while (!foundProduct && pageNumber <= 10) {
                     const paginatedUrl = `${url}&mpage=${pageNumber}`;
-                    // Eliminamos el console.log aquí para no mostrar en cada página visitada
                     await page.goto(paginatedUrl, { waitUntil: 'networkidle2', timeout: 60000 });
 
                     foundProduct = await page.evaluate((model) => {
                         const productContainers = document.querySelectorAll('div.js-product-container.js-quickshop-container');
-                        if (!productContainers) return null;  // Verificar si existen productos en la página
+                        if (!productContainers) return null;
 
                         let matchingProduct = null;
 
                         productContainers.forEach((product) => {
                             const titleElement = product.querySelector('a.item-link[title]');
                             const title = titleElement ? titleElement.getAttribute('title') : null;
-                            
+
                             if (title && title.toLowerCase().includes(model.toLowerCase())) {
                                 matchingProduct = product;
                             }
                         });
 
-                        if (!matchingProduct) {
-                            return null;
-                        }
+                        if (!matchingProduct) return null;
 
                         const priceContainer = matchingProduct.querySelector('.item-price-container.mb-1');
                         if (!priceContainer) return null;
 
-                        // Extraer el precio original
                         const originalPriceElement = priceContainer.querySelector('.js-price-display.item-price');
                         const originalPrice = originalPriceElement ? originalPriceElement.innerText.trim() : 'No disponible';
 
-                        // Extraer el precio de descuento, si existe
                         const discountPriceElement = priceContainer.querySelector('.js-compare-price-display.price-compare');
                         const discountPrice = discountPriceElement ? discountPriceElement.innerText.trim() : 'No hay descuento';
 
@@ -99,7 +94,7 @@ class ScrapingActor extends EventEmitter {
                             storeName: 'SlamDunkArgentina',
                             model: model,
                             originalPrice: originalPrice,
-                            discountPrice: discountPrice !== 'No hay descuento' ? discountPrice : null,  // Solo guardar si hay descuento
+                            discountPrice: discountPrice !== 'No hay descuento' ? discountPrice : null,
                             inStock: 'Sí'
                         };
                     }, model);
@@ -116,14 +111,14 @@ class ScrapingActor extends EventEmitter {
                 }
             }
 
-            console.log('Extracted Data:', result);
+            console.log('Datos extraídos:', result);
 
-            // Enviar los resultados a la máquina remota a través del socket
+            // Enviar los resultados a la máquina B a través del socket
             socket.emit('priceExtracted', { model, result });
 
             return result;
         } catch (error) {
-            console.error(`Error scraping ${url}: ${error.message}`);
+            console.error(`Error haciendo scraping en ${url}: ${error.message}`);
             return null;
         } finally {
             if (browser) {

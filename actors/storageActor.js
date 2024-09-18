@@ -1,16 +1,16 @@
 const Sneaker = require('../models/sneakerModel');
 const EventEmitter = require('events');
-const io = require('socket.io')(3000);  // La máquina receptora escucha en este puerto
+const io = require('socket.io')(3002);  // Cambia el puerto en el que escuchará la máquina B
 
 class StorageActor extends EventEmitter {
     constructor() {
         super();
 
-        // Escuchar los eventos de scraping desde la máquina de scraping (ScrapingActor)
+        // Escuchar los eventos de scraping desde la máquina A (ScrapingActor)
         io.on('connection', (socket) => {
             console.log('StorageActor conectado al socket');
 
-            // Escucha cuando la máquina remota envía los precios extraídos
+            // Escuchar cuando la máquina remota envía los precios extraídos
             socket.on('priceExtracted', async (data) => {
                 try {
                     console.log(`Precio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}`);
