@@ -1,11 +1,12 @@
 const puppeteer = require('puppeteer');
 const EventEmitter = require('events');
-const io = require('socket.io-client');
-
-// Conexión con la máquina B usando su IP y puerto
-const socket = io('http://192.168.0.8:3002');  // Reemplaza con la IP y puerto reales
 
 class ScrapingActor extends EventEmitter {
+    constructor(socket) {
+        super();
+        this.socket = socket;  // Asignamos el socket recibido
+    }
+
     async scrape(url, model, paginated = false) {
         let result = { store: '', storeName: '', model: model, originalPrice: '', discountPrice: '', inStock: '' };
         let browser;
@@ -114,7 +115,7 @@ class ScrapingActor extends EventEmitter {
             console.log('Datos extraídos:', result);
 
             // Enviar los resultados a la máquina B a través del socket
-            socket.emit('priceExtracted', { model, result });
+            this.socket.emit('priceExtracted', { model, result });
 
             return result;
         } catch (error) {

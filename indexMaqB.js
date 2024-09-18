@@ -13,27 +13,10 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
     process.exit(1);
   });
 
-// Inicializa el StorageActor
-const storageActor = new StorageActor();
-
 // Escuchar conexiones desde la Máquina A
 io.on('connection', (socket) => {
     console.log('Conexión establecida con la Máquina A');
 
-    // Escuchar el evento 'priceExtracted' desde la Máquina A
-    socket.on('priceExtracted', async ({ model, priceData }) => {
-        try {
-            console.log(`Recibidos datos para el modelo ${model} en la Máquina B:`, priceData);
-
-            // Almacenar los precios recibidos en la base de datos
-            await storageActor.store(model, [priceData]);
-            console.log(`Datos del modelo ${model} almacenados correctamente en la Máquina B`);
-            
-            // Enviar confirmación a la Máquina A
-            socket.emit('dataStored', `Datos del modelo ${model} almacenados correctamente`);
-        } catch (error) {
-            console.error(`Error al almacenar los datos en la Máquina B: ${error.message}`);
-            socket.emit('dataStoredError', `Error al almacenar los datos para el modelo ${model}: ${error.message}`);
-        }
-    });
+    // Inicializa el StorageActor con el socket de conexión
+    const storageActor = new StorageActor(socket);
 });

@@ -1,29 +1,23 @@
 const Sneaker = require('../models/sneakerModel');
 const EventEmitter = require('events');
-const io = require('socket.io')(3002);  // Cambia el puerto en el que escuchará la máquina B
 
 class StorageActor extends EventEmitter {
-    constructor() {
+    constructor(socket) {  // Recibe el socket desde el indexMaqB.js
         super();
 
         // Escuchar los eventos de scraping desde la máquina A (ScrapingActor)
-        io.on('connection', (socket) => {
-            console.log('StorageActor conectado al socket');
+        socket.on('priceExtracted', async (data) => {
+            try {
+                console.log(`Precio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}`);
+                await this.store(data.model, [data.result]);  // Almacenar los precios recibidos
+            } catch (error) {
+                console.error(`Error al procesar y almacenar los precios recibidos: ${error.message}`);
+            }
+        });
 
-            // Escuchar cuando la máquina remota envía los precios extraídos
-            socket.on('priceExtracted', async (data) => {
-                try {
-                    console.log(`Precio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}`);
-                    await this.store(data.model, [data.result]);  // Almacenar los precios recibidos
-                } catch (error) {
-                    console.error(`Error al procesar y almacenar los precios recibidos: ${error.message}`);
-                }
-            });
-
-            // Escuchar cuando se cierra la conexión
-            socket.on('disconnect', () => {
-                console.log('Cliente desconectado del StorageActor');
-            });
+        // Escuchar cuando se cierra la conexión
+        socket.on('disconnect', () => {
+            console.log('Cliente desconectado del StorageActor');
         });
     }
 
