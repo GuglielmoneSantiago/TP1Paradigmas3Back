@@ -1,27 +1,36 @@
 require('dotenv').config();
-const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-const priceRoutes = require('./routes/priceRoutes');
+const priceService = require('./services/priceService');
+const config = require('./config/config');
 
-const app = express();
-app.use(express.json());
-
-const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGODB_URI;
 
-app.use(cors());
-app.use('/api', priceRoutes);
-
+// Conexión a MongoDB
 mongoose.connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}/`);
-    });
+    
+    try {
+      // Ejecutar el servicio para buscar precios del modelo especificado en el archivo de configuración
+      const pricePromises = config.models.map((model) => {
+        console.log(`Iniciando búsqueda para el modelo: ${model.name}`);
+        return priceService.getPricesForModel(model.name); // Asegúrate de pasar solo el nombre
+      });
+      
+      // Esperar a que todas las promesas se resuelvan
+      await Promise.all(pricePromises);
+
+      console.log('Búsquedas de precios completadas');
+    } catch (error) {
+      console.error('Error en la búsqueda de precios:', error.message);
+    } finally {
+      // Cerrar la conexión a MongoDB sin callback
+      await mongoose.connection.close();
+      console.log('Conexión a MongoDB cerrada');
+    
+    }
   })
   .catch((error) => {
     console.error('Error connecting to MongoDB:', error.message);
     process.exit(1);
-});
-
+  });
