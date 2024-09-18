@@ -1,7 +1,7 @@
 module.exports = {
     models: [
         {
-            name: 'Nike Precision 7',
+            name: 'Peak Taichi Flash 3.0 AirPlane',
         },
         {
             name: 'Nike LeBron Witness 7',

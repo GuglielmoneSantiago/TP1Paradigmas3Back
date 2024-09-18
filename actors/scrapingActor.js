@@ -21,6 +21,7 @@ class ScrapingActor extends EventEmitter {
             result.store = storeName || 'Desconocido';
 
             if (storeName.includes('hoopshoes')) {
+                // Scraping for Hoopshoes logic (unchanged)
                 result.storeName = 'Hoopshoes';
                 result = await page.evaluate((model) => {
                     const priceElement = document.querySelector('.price');
@@ -40,6 +41,7 @@ class ScrapingActor extends EventEmitter {
                     return { storeName: 'Hoopshoes', model: model, originalPrice, discountPrice, inStock };
                 }, model);
             } else if (storeName.includes('deliteshop')) {
+                // Scraping for Deliteshop logic (unchanged)
                 result.storeName = 'Deliteshop';
                 result = await page.evaluate((model) => {
                     const priceElement = document.querySelector('.price');
@@ -85,18 +87,28 @@ class ScrapingActor extends EventEmitter {
                         const priceContainer = matchingProduct.querySelector('.item-price-container.mb-1');
                         if (!priceContainer) return null;
 
-                        const originalPriceElement = priceContainer.querySelector('.js-price-display.item-price');
-                        const originalPrice = originalPriceElement ? originalPriceElement.innerText.trim() : 'No disponible';
+                        const originalPriceElement = priceContainer.querySelector('.js-compare-price-display.price-compare');  // Precio original o $0
+                        const discountPriceElement = priceContainer.querySelector('.js-price-display.item-price');  // Precio con descuento o precio original
 
-                        const discountPriceElement = priceContainer.querySelector('.js-compare-price-display.price-compare');
-                        const discountPrice = discountPriceElement ? discountPriceElement.innerText.trim() : 'No hay descuento';
+                        let originalPrice = originalPriceElement ? originalPriceElement.innerText.trim() : null;
+                        let discountPrice = discountPriceElement ? discountPriceElement.innerText.trim() : null;
+
+                        // Si el precio original es $0, significa que no hay descuento y el precio original está en item-price
+                        if (parseFloat(originalPrice.replace(/[^\d.-]/g, '')) === 0) {
+                            originalPrice = discountPrice;
+                            discountPrice = 'No hay descuento';
+                        }
+
+                        // Verificar si el producto está sin stock
+                        const stockElement = matchingProduct.querySelector('.label.label-default');
+                        const inStock = stockElement ? 'No' : 'Sí';  // Si existe el div con la clase "label label-default", el producto está sin stock
 
                         return {
                             storeName: 'SlamDunkArgentina',
                             model: model,
-                            originalPrice: originalPrice,
-                            discountPrice: discountPrice !== 'No hay descuento' ? discountPrice : null,
-                            inStock: 'Sí'
+                            originalPrice: originalPrice || 'No disponible',
+                            discountPrice: discountPrice || 'No hay descuento',
+                            inStock: inStock
                         };
                     }, model);
 

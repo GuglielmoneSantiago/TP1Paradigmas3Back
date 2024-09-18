@@ -10,7 +10,7 @@ class StorageActor extends EventEmitter {
         if (this.socket) {
             this.socket.on('priceExtracted', async (data) => {
                 try {
-                    console.log(`Precio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}`);
+                    console.log(`\nPrecio recibido para el modelo ${data.model}: ${JSON.stringify(data.result)}`);
 
                     const cleanedPrices = {
                         storeName: data.result.storeName,
