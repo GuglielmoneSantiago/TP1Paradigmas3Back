@@ -21,7 +21,7 @@ class ScrapingActor extends EventEmitter {
             result.store = storeName || 'Desconocido';
 
             if (storeName.includes('hoopshoes')) {
-                // Scraping for Hoopshoes logic (unchanged)
+                // Scraping Hoopshoes
                 result.storeName = 'Hoopshoes';
                 result = await page.evaluate((model) => {
                     const priceElement = document.querySelector('.price');
@@ -41,7 +41,7 @@ class ScrapingActor extends EventEmitter {
                     return { storeName: 'Hoopshoes', model: model, originalPrice, discountPrice, inStock };
                 }, model);
             } else if (storeName.includes('deliteshop')) {
-                // Scraping for Deliteshop logic (unchanged)
+                // Scraping Deliteshop 
                 result.storeName = 'Deliteshop';
                 result = await page.evaluate((model) => {
                     const priceElement = document.querySelector('.price');
