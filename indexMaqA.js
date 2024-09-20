@@ -4,7 +4,7 @@ const ScrapingActor = require('./actors/scrapingActor');
 const config = require('./config/config');
 
 // Conexión con la Máquina B
-const socket = io('http://192.168.0.42:3002');  // Cambia la IP y puerto de la Máquina B
+const socket = io('http://IPMAQUI:PUERTO');  // Cambia la IP y puerto de la Máquina B
 
 // Inicializar ScrapingActor con el socket
 const scrapingActor = new ScrapingActor(socket);
