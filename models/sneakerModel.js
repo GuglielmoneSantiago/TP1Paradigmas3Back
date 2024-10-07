@@ -4,8 +4,8 @@ const sneakerSchema = new mongoose.Schema({
   model: { type: String, required: true},
   prices: [{
     storeName: String,
-    originalPrice: { type: String, required: true },  // Guardar como cadena
-    discountPrice: { type: String, default: null },   // Guardar como cadena o null si no hay descuento
+    originalPrice: { type: String, required: true }, 
+    discountPrice: { type: String, default: null },  
     inStock: String
   }]
 });
